@@ -1,0 +1,165 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tank Battle Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #333;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Game variables
+        const TILE_SIZE = 50;
+        const mapWidth = 16;
+        const mapHeight = 10;
+        const map = [];
+        const tanks = [];
+        const player = {
+            x: TILE_SIZE * 2,
+            y: TILE_SIZE * 2,
+            width: 40,
+            height: 40,
+            color: "red",
+            speed: 3,
+            dashSpeed: 10,
+            dashCooldown: 0,
+            bullets: []
+        };
+
+        // Utility functions
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min) + min);
+        }
+
+        function createRandomMap() {
+            for (let y = 0; y < mapHeight; y++) {
+                map[y] = [];
+                for (let x = 0; x < mapWidth; x++) {
+                    if (x === 0 || y === 0 || x === mapWidth - 1 || y === mapHeight - 1) {
+                        map[y][x] = 1; // Borders
+                    } else {
+                        map[y][x] = Math.random() > 0.8 ? 1 : 0; // Random obstacles
+                    }
+                }
+            }
+        }
+
+        function drawMap() {
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    if (map[y][x] === 1) {
+                        ctx.fillStyle = "gray";
+                        ctx.fillRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+        }
+
+        // Tank handling
+        function drawTank(tank) {
+            ctx.fillStyle = tank.color;
+            ctx.fillRect(tank.x, tank.y, tank.width, tank.height);
+        }
+
+        function updateTank(tank) {
+            // Random movement for enemy tanks
+            if (tank.type === "enemy") {
+                tank.x += tank.vx;
+                tank.y += tank.vy;
+
+                // Check for wall collisions
+                if (map[Math.floor(tank.y / TILE_SIZE)][Math.floor(tank.x / TILE_SIZE)] === 1) {
+                    tank.vx = -tank.vx;
+                    tank.vy = -tank.vy;
+                }
+            }
+        }
+
+        function spawnEnemies() {
+            for (let i = 0; i < 5; i++) {
+                const enemyTank = {
+                    x: getRandomInt(3, mapWidth - 3) * TILE_SIZE,
+                    y: getRandomInt(3, mapHeight - 3) * TILE_SIZE,
+                    width: 40,
+                    height: 40,
+                    color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+                    type: "enemy",
+                    vx: Math.random() > 0.5 ? 1 : -1,
+                    vy: Math.random() > 0.5 ? 1 : -1,
+                };
+                tanks.push(enemyTank);
+            }
+        }
+
+        // Player controls
+        const keys = {};
+        window.addEventListener("keydown", (e) => {
+            keys[e.code] = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            keys[e.code] = false;
+        });
+
+        function movePlayer() {
+            if (keys["ArrowUp"] || keys["KeyW"]) player.y -= player.speed;
+            if (keys["ArrowDown"] || keys["KeyS"]) player.y += player.speed;
+            if (keys["ArrowLeft"] || keys["KeyA"]) player.x -= player.speed;
+            if (keys["ArrowRight"] || keys["KeyD"]) player.x += player.speed;
+
+            // Dash ability
+            if (keys["Space"] && player.dashCooldown <= 0) {
+                player.x += player.dashSpeed * (keys["ArrowRight"] || keys["KeyD"] ? 1 : 0);
+                player.x -= player.dashSpeed * (keys["ArrowLeft"] || keys["KeyA"] ? 1 : 0);
+                player.y += player.dashSpeed * (keys["ArrowDown"] || keys["KeyS"] ? 1 : 0);
+                player.y -= player.dashSpeed * (keys["ArrowUp"] || keys["KeyW"] ? 1 : 0);
+                player.dashCooldown = 50;
+            }
+
+            // Cooldown timer
+            if (player.dashCooldown > 0) player.dashCooldown--;
+        }
+
+        // Main game loop
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw map
+            drawMap();
+
+            // Move and draw player
+            movePlayer();
+            drawTank(player);
+
+            // Move and draw enemy tanks
+            tanks.forEach((tank) => {
+                updateTank(tank);
+                drawTank(tank);
+            });
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize game
+        createRandomMap();
+        spawnEnemies();
+        gameLoop();
+    </script>
+</body>
+</html>
